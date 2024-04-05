@@ -1,9 +1,0 @@
-reports:
-  - name: "TEST"
-    group_name: "TEST"
-    description: "TEST"
-    Refresh: True
-    Export: 
-    - "PDF": False
-    - "PNG": False
-    - "PPTX": False
