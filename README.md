@@ -1,1 +1,1 @@
-# bi-modules
+# bi_modules
