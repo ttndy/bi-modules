@@ -1,5 +1,0 @@
-recipients:
- - test@test.com
-
-error_recipients:
- - test.test@test.com
