@@ -17,3 +17,10 @@ __all__ = [
     'Basic_Credentials',
     'SystemConfiguration'
 ]
+
+
+
+try:
+    from .config_vd_dsn import conn_vd
+except:
+    pass
