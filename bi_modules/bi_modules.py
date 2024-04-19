@@ -499,16 +499,14 @@ def report_refresh(
 
                     html_content = f'''
                     <div style="font-family: Arial, sans-serif; border: 2px solid #4CAF50; padding: 16px; border-radius: 8px; background-color: #f9f9f9;">
-                        <h2 style="color: #4CAF50;">Power BI Refresh: <span style="font-weight: bold;">{report_name}</span> completed successfully.</h2>
+                        <h2 style="color: #4CAF50;">Power BI Refresh: <span style="font-weight: bold;">{report_name} in Workspace: {group_name}</span> completed successfully.</h2>
                         <p style="font-size: 18px;">Click the button below to view the report:</p>
                         <br><a href="{webUrl}" style="background-color: #4CAF50; color: white; padding: 14px 20px; margin: 8px 0; border: none; cursor: pointer; border-radius: 4px; text-decoration: none;">Link to Report</a><br>
                     </div>
                     '''
 
-                    if body == '':
-                        body = html_content
-                    if subject == '':
-                        subject = f"Power BI Refresh: {report_name}"
+                    body = html_content
+                    subject = f"Power BI Refresh: {report_name} in workspace {group_name} completed successfully."
                 
                     files = []
 
