@@ -9,10 +9,8 @@ port="20502"
 host=String.load("dataconnect-host").value
 ssl="1"
 dsn="VENDORDRILL"
-# pyodbc.autocommit = True
 
 def connect():
-    pyodbc.autocommit = True
     at_scale_connection = pyodbc.connect(
 #                 Destination of your HDBC Driver  
         "DRIVER=/opt/cloudera/hiveodbc/lib/64/libclouderahiveodbc64.so" +
@@ -27,7 +25,7 @@ def connect():
         ";TrustedCerts=/opt/cacerts.pem" +
 #                 Your Login Credentials
         ";UID=" + uid +
-        ";PWD=" + pwd,AutoCommit=True)
+        ";PWD=" + pwd,autocommit=True)
     return at_scale_connection
 
 conn_vd = connect()
