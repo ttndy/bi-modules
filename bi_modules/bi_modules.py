@@ -610,7 +610,7 @@ def sf_pe_prod_connection(database: str = 'BUSINESSINTEL01'
                     warehouse=warehouse,
                     role=role
                 )
-
+    snowflake.connector.paramstyle = 'qmark'
     return connection.connect()
 
 def sf_cpt_connection(database: str = 'BUSINESSINTEL01'
