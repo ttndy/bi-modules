@@ -5,7 +5,6 @@ import json
 import time
 from pathlib import Path
 from typing import List, Optional
-
 import pandas as pd
 import requests
 import snowflake.connector
@@ -460,34 +459,6 @@ async def sf_pe_it_connection(
         role=role
     )
     return await connection.connect()
-
-
-
-
-
-
-
-
-
-
-async def process_blob(blob_path: str = None, blob_bytes: bytes = None,parent_folder: str = None, sub_folder: str = None):
-
-    azure_credentials_block = await AzureBlobStorageCredentials.load('azure-blob-storage-credentials-ryobi-01', validate=False)
-    blob_client = azure_credentials_block.get_blob_client(container='staging', blob=blob_path)
-    try:
-        await blob_client.undelete_blob()
-    except Exception as e:
-        pass
-
-    myblob = await blob_storage_download('staging', blob_path, azure_credentials_block)
-    stage_bytes = transform(myblob, blob_path)
-    await blob_storage_upload(stage_bytes, 'extstaging', azure_credentials_block, f'raw/{parent_folder}/{sub_folder}/{blob_path}', overwrite=True)
-
-    try:
-        await blob_client.delete_blob()
-    except Exception as e:
-        pass
-
 
 
 if __name__ == "__main__":
