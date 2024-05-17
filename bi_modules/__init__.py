@@ -9,7 +9,8 @@ from .bi_modules import (
     report_refresh,
     sf_pe_prod_connection,
     sf_cpt_connection,
-    sf_pe_it_connection
+    sf_pe_it_connection,
+    process_blob
 )
 
 __all__ = [
