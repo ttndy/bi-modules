@@ -4,7 +4,7 @@ from prefect_azure import AzureBlobStorageCredentials, AzureBlobStorageContainer
 
 
 
-def connect():
+def conn_vd():
         secret_block_uid = Secret.load("vd-uid")
         secret_block_pwd = Secret.load("vd-pwd")
 
@@ -46,10 +46,8 @@ def connect():
                 ";PWD=" + pwd,autocommit=True)
         return at_scale_connection
 
-conn_vd = connect()
-
 
 
 if __name__ == '__main__':
-        connect()
+        conn_vd()
 
