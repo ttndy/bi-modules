@@ -1,10 +1,7 @@
-from prefect.blocks.core import Block
-from prefect.blocks.fields import SecretDict
+from prefect.blocks.core import Block,SecretStr,SecretDict
 from typing import Dict, Optional
 from prefect.blocks.system import Secret, JSON
 from prefect_snowflake import SnowflakeCredentials
-
-from pydantic.v1 import  SecretStr
 
 
 class Snowflake_Custom_Credentials(Block):
@@ -34,6 +31,6 @@ class SystemConfiguration(Block):
 
 
 if __name__ == '__main__':
-    system_configuration_block = Basic_Credentials.load("sf-old-key")
-    system_secrets = system_configuration_block.username.get_secret_value()
+    system_configuration_block = SystemConfiguration.load("datateam-email-credentials")
+    system_secrets = system_configuration_block.system_secrets.get_secret_value()
     print(system_secrets)
