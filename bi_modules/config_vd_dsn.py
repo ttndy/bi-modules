@@ -2,7 +2,7 @@ import pyodbc
 from prefect.blocks.system import Secret, String
 from prefect_azure import AzureBlobStorageCredentials, AzureBlobStorageContainer
 import logging
-
+import os
 
 def conn_vd():
     try:
