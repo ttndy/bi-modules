@@ -1,10 +1,11 @@
 import pyodbc
 from prefect.blocks.system import Secret, String
 from prefect_azure import AzureBlobStorageCredentials, AzureBlobStorageContainer
-
+import logging
 
 
 def conn_vd():
+    try:
         secret_block_uid = Secret.load("vd-uid")
         secret_block_pwd = Secret.load("vd-pwd")
 
@@ -22,12 +23,21 @@ def conn_vd():
         )
 
         file = "cacerts.pem"
+        file_path = os.path.join('/opt/', file)
 
-        with open('/opt/' + file , "wb") as f:
-            block.download_object_to_file_object(
-                from_path='dataconnect/' + file,
-                to_file_object=f
-            )
+        # Ensure the directory exists
+        os.makedirs('/opt/', exist_ok=True)
+
+        # Check if the file already exists
+        if not os.path.isfile(file_path):
+            with open(file_path, "wb") as f:
+                block.download_object_to_file_object(
+                    from_path='dataconnect/' + file,
+                    to_file_object=f
+                )
+            logging.info(f"File {file_path} downloaded successfully.")
+        else:
+            logging.info(f"File {file_path} already exists, skipping download.")
 
         at_scale_connection = pyodbc.connect(
         #                 Destination of your HDBC Driver  
@@ -45,8 +55,9 @@ def conn_vd():
                 ";UID=" + uid +
                 ";PWD=" + pwd,autocommit=True)
         return at_scale_connection
-
-
+    except Exception as e:
+        logging.error(f"Error in conn_vd: {e}")
+        raise
 
 if __name__ == '__main__':
         conn_vd()
