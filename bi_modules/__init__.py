@@ -13,6 +13,12 @@ from .bi_modules import (
     blob_cleanup
 )
 
+
+from .check_flow_runs import (
+    check_and_wait_for_running_flow_runs
+)
+
+
 __all__ = [
     'Snowflake_Custom_Credentials',
     'Basic_Credentials',
