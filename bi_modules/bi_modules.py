@@ -474,7 +474,8 @@ def report_refresh(
                           ) -> None:
     with open(reports_yaml_file_path, 'r') as file:
         reports = yaml.safe_load(file).get('reports', [])
-        
+        if env == 'QA':
+            return print(f'Running in QA, skipping refresh for the following report(s):<br>{reports}"
         for report in reports:
             report_name = report.get('name')
             group_name = report.get('group_name')
