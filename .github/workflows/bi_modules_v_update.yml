@@ -1,11 +1,11 @@
 name: Data Team Python Module Update Version
 
 on:
-  # push:
-  #   branches:
-  #     - main
-  #   paths:
-  #     - 'images/**'
+  push:
+    branches:
+      - main
+    paths:
+      - 'bi_modules/**'
   workflow_dispatch: # This allows manual triggering
 
 jobs:
