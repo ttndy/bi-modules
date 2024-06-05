@@ -1,0 +1,51 @@
+name: Data Team Python Module Update Version
+
+on:
+  # push:
+  #   branches:
+  #     - main
+  #   paths:
+  #     - 'images/**'
+  workflow_dispatch: # This allows manual triggering
+
+jobs:
+  semantic-release:
+    runs-on: self-hosted
+    outputs:
+      release-version: ${{ steps.semver.outputs.patch }}
+      release_created: ${{ steps.create_release.outputs.release_created }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # required for github-action-get-previous-tag
+
+      - name: Get previous tag
+        id: previoustag
+        uses: 'WyriHaximus/github-action-get-previous-tag@v1'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get next version
+        id: semver
+        uses: 'WyriHaximus/github-action-next-semvers@v1'
+        with:
+          version: ${{ steps.previoustag.outputs.tag }}
+
+      - name: Create release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.semver.outputs.patch }}
+          release_name: Release ${{ steps.semver.outputs.patch }}
+          draft: false
+          prerelease: false
+
+      - name: print name
+        id: print_name
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          echo "v${{ steps.semver.outputs.patch }}"
+        shell: bash
