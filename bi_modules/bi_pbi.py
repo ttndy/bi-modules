@@ -11,7 +11,10 @@ except:
 import yaml
 from pathlib import Path
 from prefect.blocks.system import String
-from bi_email import send_email
+try:
+    .from bi_email import send_email
+except:
+    from bi_email import send_email
 env = String.load("environment").value
 
 system_configuration_block = SystemConfiguration.load("datateam-email-credentials")
