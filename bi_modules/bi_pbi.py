@@ -12,7 +12,7 @@ import yaml
 from pathlib import Path
 from prefect.blocks.system import String
 try:
-    .from bi_email import send_email
+    from .bi_email import send_email
 except:
     from bi_email import send_email
 env = String.load("environment").value
