@@ -534,6 +534,7 @@ def sf_pe_prod_connection(database: str = 'BUSINESSINTEL01'
                           ,schema: str = 'INFORMATION_SCHEMA'
                           ,role: str = 'DEV_DATA_ENG_FR_AM'
                           ,warehouse: str = 'PROD_INGESTION_DE_WH'
+                          ,sql_alchemy = False
                           ):
     
     snowflake_credentials_block = SnowflakeCredentials.load("snowflake-data-engineering-etl")
