@@ -10,7 +10,7 @@ on:
 
 jobs:
   semantic-release:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     outputs:
       release-version: ${{ steps.semver.outputs.patch }}
       release_created: ${{ steps.create_release.outputs.release_created }}
