@@ -344,12 +344,7 @@ class PowerBiRefresh:
         status_check_response = self.power_bi_check_refresh_status()  
         print("Status Check Response: ", status_check_response)  
   
-        # Export report  
-        # report_id,webUrl = self.get_report_id( self.get_dataset_id() )  
-        # if report_id is not None:  
-        #     self.export_report(report_id)  
-        # else:  
-        #     print("No report found for the dataset.")
+
 ################################################################################################################################
 
 class SnowflakeConnection:
@@ -535,60 +530,6 @@ def report_refresh(
                                 )
 
 
-
-# def report_export(
-#                     report_names: list,
-#                     number_of_tries: int = 5,
-#                     subject: str = '',
-#                     body: str = '',
-#                     recipient_yaml_file_path: str = find_yaml_path(),
-#                       pdf: bool = False,
-#                         png: bool = False,
-#                           pptx: bool = False
-#                           ) -> None:
-
-#     files = []
-#     html_content = ''
-
-#     for report_name in report_names:
-#         power_bi_refresh = PowerBiRefresh(report_name)  
-#         report_id,webUrl = power_bi_refresh.get_report_id(power_bi_refresh.get_dataset_id())
-
-#         html_content += f'''
-#         <div style="font-family: Arial, sans-serif; border: 2px solid #4CAF50; padding: 16px; border-radius: 8px; background-color: #f9f9f9;">
-#             <h2 style="color: #4CAF50;">Power BI Export: <span style="font-weight: bold;">{report_name}</span> completed successfully.</h2>
-#             <p style="font-size: 18px;">Click the button below to view the report:</p>
-#             <br><a href="{webUrl}" style="background-color: #4CAF50; color: white; padding: 14px 20px; margin: 8px 0; border: none; cursor: pointer; border-radius: 4px; text-decoration: none;">Link to Report</a><br>
-#         </div>
-#         '''
-
-
-#         if pptx:
-#             if report_id is not None:
-#                 files += [power_bi_refresh.export_report(report_name,report_id,"PPTX")]
-#             else:
-#                 print("No report found for the dataset.")
-#         if png:
-#             if report_id is not None:
-#                 files += [power_bi_refresh.export_report(report_name,report_id,"PNG")]
-#             else:
-#                 print("No report found for the dataset.")
-#         if pdf:
-#             if report_id is not None:
-#                 files += [power_bi_refresh.export_report(report_name,report_id,"PDF")]
-#             else:
-#                 print("No report found for the dataset.")
-
-#     return files,html_content
-
-
-
-
-
-
-
-
-
 def sf_pe_prod_connection(database: str = 'BUSINESSINTEL01'
                           ,schema: str = 'INFORMATION_SCHEMA'
                           ,role: str = 'DEV_DATA_ENG_FR_AM'
@@ -601,7 +542,14 @@ def sf_pe_prod_connection(database: str = 'BUSINESSINTEL01'
     account = snowflake_credentials_block.account
     role = snowflake_credentials_block.role
 
-
+    if env == 'QA':
+        role = 'DEV_DATA_ENG_FR_AM'
+        database = database + '_QA'
+        
+    if sql_alchemy:
+        engine = create_engine(f'snowflake://{username}:{password}@{account}/{database}/{schema}?role={role}&warehouse={warehouse}')
+        return engine
+    
     connection = SnowflakeConnection(
                     account=account,
                     database=database,
@@ -613,50 +561,6 @@ def sf_pe_prod_connection(database: str = 'BUSINESSINTEL01'
                 )
     snowflake.connector.paramstyle = 'qmark'
     return connection.connect()
-
-def sf_cpt_connection(database: str = 'BUSINESSINTEL01'
-                      ,schema: str = 'INFORMATION_SCHEMA'
-                      ,role: str = 'ACCOUNTADMIN'
-                      ,warehouse: str = 'DEMAND'
-                      ):
-    
-    if env == 'QA':
-        database += '_QA'
-    cpt_credentials = Basic_Credentials.load("sf-old-key")
-    username = cpt_credentials.username.get_secret_value()
-    password = cpt_credentials.password.get_secret_value()
-    connection = SnowflakeConnection(
-                    account=String.load("sf-cpt-account-name").value,
-                    database=database,
-                    schema=schema,
-                    username=username,
-                    password=password,
-                    warehouse=warehouse,
-                    role=role
-                )
-    
-    return connection.connect()
-
-
-def sf_pe_it_connection(database: str = 'IT'
-                        ,schema: str = 'INFORMATION_SCHEMA'
-                        ,role: str = 'ACCOUNTADMIN'
-                        ,warehouse: str = 'IT_ETL'
-                        ):
-    daie_credentials = Basic_Credentials.load("sf-daie-key")
-    username = daie_credentials.username.get_secret_value()
-    password = daie_credentials.password.get_secret_value()
-    connection = SnowflakeConnection(
-                    account=String.load("sf-daie-account-name").value,
-                    database=database,
-                    schema=schema,
-                    username=username,
-                    password=password,
-                    warehouse=warehouse,
-                    role=role
-                )
-    return connection.connect()
-
 
 def blob_cleanup(blob_name):
     
@@ -687,6 +591,4 @@ def blob_cleanup(blob_name):
 
 if __name__ == "__main__":
     print(env)
-    # report_refresh(send_email_when_done=True)
     send_email(subject='Test',body='Test',attachments=['recipients.yaml','reports.yaml'],message_status='Warning')
-    # refresh_report("LOGILITY - CPT PSI", send_email_when_done=True,pptx=True)
