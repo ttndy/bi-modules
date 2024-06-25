@@ -48,7 +48,7 @@ def sf_pe_prod_connection(database: str = 'BUSINESSINTEL01'
     role = snowflake_credentials_block.role
 
     if env == 'QA':
-        role = 'DEV_DATA_ENG_FR_AM'
+        role = 'ACCOUNTADMIN'
         database = database + '_QA'
         
     if sql_alchemy:
