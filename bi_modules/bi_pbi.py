@@ -385,7 +385,7 @@ def report_refresh_noyaml(
     # if env == 'QA':
     #     return print(f"Running in QA, skipping refresh for the following report:<br>{report_name}")
     
-    refresh = report.get('Refresh', True)
+    refresh = True
     export_options = []
     
     # Convert list of dictionaries into a single dictionary for easier access
