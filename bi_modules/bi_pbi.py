@@ -378,7 +378,8 @@ def report_refresh_noyaml(
                     subject: str = '',
                     body: str = '',
                     report_name: str = '',
-                    group_name: str = ''
+                    group_name: str = '',
+                    email_recipients: str = None,
                           ) -> None:
                           
     if env == 'QA':
@@ -431,12 +432,20 @@ def report_refresh_noyaml(
                     files += [power_bi_refresh.export_report(report_name,report_id,"PDF")]
                 else:
                     print("No report found for the dataset.")
+            if email_recipients is not None:
+                send_email(
+                            subject=subject,
+                            body=body,
+                            attachments=files,
+                            email=email_recipients
+                            )
+            else:
+                send_email(
+                            subject=subject,
+                            body=body,
+                            attachments=files
+                            )
 
-            send_email(
-                        subject=subject,
-                        body=body,
-                        attachments=files
-                        )
 
 
 
