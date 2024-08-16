@@ -382,8 +382,8 @@ def report_refresh_noyaml(
                     email_recipients: str = None,
                           ) -> None:
                           
-    if env == 'QA':
-        return print(f"Running in QA, skipping refresh for the following report(s):<br>{reports}")
+    # if env == 'QA':
+    #     return print(f"Running in QA, skipping refresh for the following report:<br>{report_name}")
     
     refresh = report.get('Refresh', True)
     export_options = []
