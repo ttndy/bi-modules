@@ -372,5 +372,73 @@ def report_refresh(
                                 )
 
 
+def report_refresh_noyaml(
+                    number_of_tries: int = 5,
+                    send_email_when_done: bool = False,
+                    subject: str = '',
+                    body: str = '',
+                    report_name: str = '',
+                    group_name: str = ''
+                          ) -> None:
+                          
+    if env == 'QA':
+        return print(f"Running in QA, skipping refresh for the following report(s):<br>{reports}")
+    
+    refresh = report.get('Refresh', True)
+    export_options = report.get('Export', [])
+    
+    # Convert list of dictionaries into a single dictionary for easier access
+    export_options_dict = {k: v for d in export_options for k, v in d.items()}
+    
+    pdf = export_options_dict.get('PDF', False)
+    png = export_options_dict.get('PNG', False)
+    pptx = export_options_dict.get('PPTX', False)
+
+    if refresh:
+        print(f"Refreshing {report_name} in Workspace {group_name}...")
+        power_bi_refresh = PowerBiRefresh(report_name, group_name,number_of_tries)  
+        power_bi_refresh.pbi_refresh()
+
+
+        if send_email_when_done:  
+            report_id,webUrl = power_bi_refresh.get_report_id()
+
+            html_content = f'''
+            <div style="font-family: Arial, sans-serif; border: 2px solid #4CAF50; padding: 16px; border-radius: 8px; background-color: #f9f9f9;">
+                <h2 style="color: #4CAF50;">Power BI Refresh: <span style="font-weight: bold;">{report_name} in Workspace: {group_name}</span> completed successfully.</h2>
+                <p style="font-size: 18px;">Click the button below to view the report:</p>
+                <br><a href="{webUrl}" style="background-color: #4CAF50; color: white; padding: 14px 20px; margin: 8px 0; border: none; cursor: pointer; border-radius: 4px; text-decoration: none;">Link to Report</a><br>
+            </div>
+            '''
+
+            body = html_content
+            subject = f"Power BI Refresh: {report_name} in workspace {group_name} completed successfully."
+        
+            files = []
+
+            if pptx:
+                if report_id is not None:
+                    files += [power_bi_refresh.export_report(report_name,report_id,"PPTX")]
+                else:
+                    print("No report found for the dataset.")
+            if png:
+                if report_id is not None:
+                    files += [power_bi_refresh.export_report(report_name,report_id,"PNG")]
+                else:
+                    print("No report found for the dataset.")
+            if pdf:
+                if report_id is not None:
+                    files += [power_bi_refresh.export_report(report_name,report_id,"PDF")]
+                else:
+                    print("No report found for the dataset.")
+
+            send_email(
+                        subject=subject,
+                        body=body,
+                        attachments=files
+                        )
+
+
+
 if __name__ == "__main__":
     print(env)
