@@ -17,7 +17,8 @@ from .bi_db import (
 )
 
 from .bi_pbi import (
-    report_refresh
+    report_refresh,
+    report_refresh_noyaml
 )
 
 from .check_flow_runs import (
