@@ -45,7 +45,6 @@ def sf_pe_prod_connection(database: str = 'BUSINESSINTEL01'
     username = snowflake_credentials_block.user
     password = snowflake_credentials_block.password.get_secret_value()
     account = snowflake_credentials_block.account
-    role = snowflake_credentials_block.role
 
     if env == 'QA':
         role = 'ACCOUNTADMIN'
