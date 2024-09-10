@@ -27,7 +27,9 @@ class SnowflakeConnection:
                                             schema=self.schema,
                                             warehouse=self.warehouse,
                                             role=self.role,
-                                            query_tag=self.tag
+                                            session_parameters={
+                                                                'QUERY_TAG': f'{self.tag}',
+                                                                }
                         )
 
 
@@ -41,7 +43,7 @@ def sf_pe_prod_connection(database: str = 'BUSINESSINTEL01'
                           ,role: str = 'DEV_DATA_ENG_FR_AM'
                           ,warehouse: str = 'PROD_INGESTION_DE_WH'
                           ,sql_alchemy = False
-                          ,tag = f'F:{runtime.flow_run.name} - D:{runtime.deployment.name} - T:{runtime.task_run.name}'
+                          ,tag = 'Untagged'
                           ):
     
     snowflake_credentials_block = SnowflakeCredentials.load("snowflake-data-engineering-etl")
