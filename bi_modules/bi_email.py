@@ -8,6 +8,7 @@ except:
 import yaml
 from pathlib import Path
 from prefect.blocks.system import String
+from prefect.concurrency.sync import concurrency
 
 env = String.load("environment").value
 system_configuration_block = SystemConfiguration.load("datateam-email-credentials")
@@ -57,7 +58,8 @@ def send_email(recipient_yaml_file_path: str = find_yaml_path(),
                attachments: List[str] = [],
                message_status: Optional[str] = None, 
                email: str = None) -> None:
-    
+
+
     """
     Sends an email to a specified recipient.
 
@@ -68,72 +70,73 @@ def send_email(recipient_yaml_file_path: str = find_yaml_path(),
     :param message_status: Status of the message, allowable values are "Success", "Error", "Warning".
     :param email: Email address of the sender.
     """
-    # List of allowable message statuses
-    allowable_statuses = ["Success", "Error", "Warning"]
-    if message_status is not None and message_status not in allowable_statuses:
-        raise ValueError(f"message_status must be one of {allowable_statuses}, got '{message_status}' instead.")
-    print(f"Message Status: {message_status}")  # Proceed with the function
+    with concurrency("email_concurrency", occupy=1):
+        # List of allowable message statuses
+        allowable_statuses = ["Success", "Error", "Warning"]
+        if message_status is not None and message_status not in allowable_statuses:
+            raise ValueError(f"message_status must be one of {allowable_statuses}, got '{message_status}' instead.")
+        print(f"Message Status: {message_status}")  # Proceed with the function
 
 
-    account = login()
-    # Read list of recipient emails from YAML file
-    with open(recipient_yaml_file_path, 'r') as file:
-        load_yaml = yaml.safe_load(file)
-        recipients = load_yaml['recipients']
-        if message_status == "Error":
-            try:
-                print(load_yaml['error_recipients'])
-                recipients += load_yaml['error_recipients']
-            except:
-                print("No error_recipients found in the yaml file, please update")
-        if email is not None:
-            recipients += [email]
-    # Create and send email
-    m = account.new_message()
-    if env == 'QA':
-        recipients = [String.load("datateam-email").value]
-        if message_status == 'Error':
-            try:
-                print(load_yaml['error_recipients'])
-            except:
-                print("No error_recipients found in the yaml file, please update")
-        if email is not None:
-            recipients += [email]
-            
-        subject += ' - DEBUG MODE' 
-    m.to.add(recipients)
-    m.subject = subject
-    if message_status == 'Success':
-        body_formatted = f"""
-            <div style="font-family: Arial, sans-serif; border: 2px solid #4CAF50; padding: 16px; border-radius: 8px; background-color: #DFF2BF;">
-                <h2 style="color: #4CAF50;">Success:</h2>
-                <h3 style="color: #4CAF50;">Log Contents:</h3>
-                <div style="overflow-x: auto;">{body}</div>
-                <br>
+        account = login()
+        # Read list of recipient emails from YAML file
+        with open(recipient_yaml_file_path, 'r') as file:
+            load_yaml = yaml.safe_load(file)
+            recipients = load_yaml['recipients']
+            if message_status == "Error":
+                try:
+                    print(load_yaml['error_recipients'])
+                    recipients += load_yaml['error_recipients']
+                except:
+                    print("No error_recipients found in the yaml file, please update")
+            if email is not None:
+                recipients += [email]
+        # Create and send email
+        m = account.new_message()
+        if env == 'QA':
+            recipients = [String.load("datateam-email").value]
+            if message_status == 'Error':
+                try:
+                    print(load_yaml['error_recipients'])
+                except:
+                    print("No error_recipients found in the yaml file, please update")
+            if email is not None:
+                recipients += [email]
+                
+            subject += ' - DEBUG MODE' 
+        m.to.add(recipients)
+        m.subject = subject
+        if message_status == 'Success':
+            body_formatted = f"""
+                <div style="font-family: Arial, sans-serif; border: 2px solid #4CAF50; padding: 16px; border-radius: 8px; background-color: #DFF2BF;">
+                    <h2 style="color: #4CAF50;">Success:</h2>
+                    <h3 style="color: #4CAF50;">Log Contents:</h3>
+                    <div style="overflow-x: auto;">{body}</div>
+                    <br>
+                </div>
+                """
+        elif message_status == 'Error':
+            body_formatted = f"""
+            <div style="font-family: Arial, sans-serif; border: 2px solid #FF0000; padding: 16px; border-radius: 8px; background-color: #FFCFCF;">
+                <h2 style="color: #FF0000;">Error Log Contents:</h2>
+                <h4 style="overflow-x: auto;">{body}</h4>
             </div>
             """
-    elif message_status == 'Error':
-        body_formatted = f"""
-        <div style="font-family: Arial, sans-serif; border: 2px solid #FF0000; padding: 16px; border-radius: 8px; background-color: #FFCFCF;">
-            <h2 style="color: #FF0000;">Error Log Contents:</h2>
-            <h4 style="overflow-x: auto;">{body}</h4>
-        </div>
-        """
-    elif message_status == 'Warning':
-        body_formatted = f"""
-            <div style="font-family: Arial, sans-serif; border: 2px solid #FFC107; padding: 16px; border-radius: 8px; background-color: #FFF9C4;">
-                <h2 style="color: #FFC107;">Warning:</h2>
-                <p style="font-size: 18px;">{body}</p>
-            </div>
-        """
-    else:
-        body_formatted = body
-        
-    m.body = body_formatted
+        elif message_status == 'Warning':
+            body_formatted = f"""
+                <div style="font-family: Arial, sans-serif; border: 2px solid #FFC107; padding: 16px; border-radius: 8px; background-color: #FFF9C4;">
+                    <h2 style="color: #FFC107;">Warning:</h2>
+                    <p style="font-size: 18px;">{body}</p>
+                </div>
+            """
+        else:
+            body_formatted = body
+            
+        m.body = body_formatted
 
-    for attachment in attachments:
-        m.attachments.add(attachment)
-    m.send()
+        for attachment in attachments:
+            m.attachments.add(attachment)
+        m.send()
 
 if __name__ == "__main__":
     print(env)
