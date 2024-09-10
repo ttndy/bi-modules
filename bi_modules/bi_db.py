@@ -3,11 +3,11 @@ import snowflake.connector
 from prefect.blocks.system import String
 env = String.load("environment").value
 from prefect_snowflake import SnowflakeCredentials
-
+from prefect import runtime
 ################################################################################################################################
 
 class SnowflakeConnection:
-    def __init__(self, account, database, schema, username, password, warehouse, role):
+    def __init__(self, account, database, schema, username, password, warehouse, role, tag):
         self.account = account
         self.database = database
         self.schema = schema
@@ -15,6 +15,7 @@ class SnowflakeConnection:
         self.password = password
         self.warehouse = warehouse
         self.role = role
+        self.tag = tag
 
     def connect(self):
 
@@ -25,7 +26,8 @@ class SnowflakeConnection:
                                             database=self.database,
                                             schema=self.schema,
                                             warehouse=self.warehouse,
-                                            role=self.role
+                                            role=self.role,
+                                            query_tag=self.tag
                         )
 
 
@@ -39,6 +41,7 @@ def sf_pe_prod_connection(database: str = 'BUSINESSINTEL01'
                           ,role: str = 'DEV_DATA_ENG_FR_AM'
                           ,warehouse: str = 'PROD_INGESTION_DE_WH'
                           ,sql_alchemy = False
+                          ,tag = f'F:{runtime.flow_run.name} - D:{runtime.deployment.name} - T:{runtime.task_run.name}'
                           ):
     
     snowflake_credentials_block = SnowflakeCredentials.load("snowflake-data-engineering-etl")
@@ -49,7 +52,7 @@ def sf_pe_prod_connection(database: str = 'BUSINESSINTEL01'
     if env == 'QA':
         role = 'ACCOUNTADMIN'
         database = database + '_QA'
-        
+    
     if sql_alchemy:
         engine = create_engine(f'snowflake://{username}:{password}@{account}/{database}/{schema}?role={role}&warehouse={warehouse}')
         return engine
@@ -61,7 +64,8 @@ def sf_pe_prod_connection(database: str = 'BUSINESSINTEL01'
                     username=username,
                     password=password,
                     warehouse=warehouse,
-                    role=role
+                    role=role,
+                    tag=tag
                 )
     snowflake.connector.paramstyle = 'qmark'
     return connection.connect()
