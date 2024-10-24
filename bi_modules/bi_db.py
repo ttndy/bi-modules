@@ -3,7 +3,7 @@ import snowflake.connector
 from prefect.blocks.system import String
 env = String.load("environment").value
 from prefect_snowflake import SnowflakeCredentials
-from prefect import runtime
+from prefect.runtime import deployment,flow_run
 ################################################################################################################################
 
 class SnowflakeConnection:
@@ -43,17 +43,12 @@ def sf_pe_prod_connection(database: str = 'BUSINESSINTEL01'
                           ,role: str = 'DEV_DATA_ENG_FR_AM'
                           ,warehouse: str = 'PROD_INGESTION_DE_WH'
                           ,sql_alchemy = False
-                          ,tag = 'Untagged'
+                          ,tag = f"PREFECT - {flow_run.name or 'Local Debug'}/{deployment.id or 'No Name'}"
                           ):
-    
     snowflake_credentials_block = SnowflakeCredentials.load("snowflake-data-engineering-etl")
     username = snowflake_credentials_block.user
     password = snowflake_credentials_block.password.get_secret_value()
     account = snowflake_credentials_block.account
-
-    if env == 'QA':
-        role = 'ACCOUNTADMIN'
-        database = database + '_QA'
     
     if sql_alchemy:
         engine = create_engine(f'snowflake://{username}:{password}@{account}/{database}/{schema}?role={role}&warehouse={warehouse}')
@@ -75,3 +70,5 @@ def sf_pe_prod_connection(database: str = 'BUSINESSINTEL01'
 
 if __name__ == "__main__":
     print(env)
+    conn = sf_pe_prod_connection()
+    conn.cursor().execute('SELECT CURRENT_TIMESTAMP()').fetchone()
