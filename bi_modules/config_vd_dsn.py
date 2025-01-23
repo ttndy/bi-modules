@@ -4,10 +4,10 @@ from prefect_azure import AzureBlobStorageCredentials, AzureBlobStorageContainer
 import logging
 import os
 
-def conn_vd():
+def conn_vd(bu):
     try:
-        secret_block_uid = Secret.load("vd-uid")
-        secret_block_pwd = Secret.load("vd-pwd")
+        secret_block_uid = Secret.load(f"vd-uid-{bu}")
+        secret_block_pwd = Secret.load(f"vd-pwd-{bu}")
 
         uid = secret_block_uid.get()
         pwd = secret_block_pwd.get()
