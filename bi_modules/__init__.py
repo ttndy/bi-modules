@@ -18,7 +18,8 @@ from .bi_db import (
 
 from .bi_pbi import (
     report_refresh,
-    report_refresh_noyaml
+    report_refresh_noyaml,
+    send_report_as_embedded_image
 )
 
 from .check_flow_runs import (
@@ -30,6 +31,7 @@ __all__ = [
     'Basic_Credentials',
     'SystemConfiguration'
 ]
+
 
 try:
     from .config_vd_dsn import conn_vd
