@@ -52,60 +52,45 @@ def read_inbox() -> None:
     
 ################################################################################################################################
 
-def send_email(recipient_yaml_file_path: str = find_yaml_path(), 
-               subject: str = 'test', 
-               body: str = 'test', 
-               attachments: List[str] = [],
-               message_status: Optional[str] = None, 
-               email: str = None) -> None:
-
-
+def send_email(
+    subject: str,
+    body: str,
+    attachments: list = None,
+    email: str = None,
+    content_ids: dict = None,  # For inline images
+    message_status: str = None  # Optional message status
+):
     """
-    Sends an email to a specified recipient.
-
-    :param recipient_yaml_file_path: Path to the YAML file containing recipient information.
-    :param subject: Subject line of the email.
-    :param body: Body of the email.
-    :param attachments: A list of file paths to attach to the email.
-    :param message_status: Status of the message, allowable values are "Success", "Error", "Warning".
-    :param email: Email address of the sender.
+    Send an email with optional inline images and status formatting
+    
+    Args:
+        subject: Email subject
+        body: Email body (HTML)
+        attachments: List of file paths to attach
+        email: Recipient email address(es)
+        content_ids: Dictionary mapping file paths to content IDs for inline images
+        message_status: Optional status ('Success', 'Error', 'Warning') for formatting
     """
     with concurrency("email_concurrency", occupy=1):
-        # List of allowable message statuses
-        allowable_statuses = ["Success", "Error", "Warning"]
-        if message_status is not None and message_status not in allowable_statuses:
-            raise ValueError(f"message_status must be one of {allowable_statuses}, got '{message_status}' instead.")
-        print(f"Message Status: {message_status}")  # Proceed with the function
-
-
         account = login()
-        # Read list of recipient emails from YAML file
-        with open(recipient_yaml_file_path, 'r') as file:
-            load_yaml = yaml.safe_load(file)
-            recipients = load_yaml['recipients']
-            if message_status == "Error":
-                try:
-                    print(load_yaml['error_recipients'])
-                    recipients += load_yaml['error_recipients']
-                except:
-                    print("No error_recipients found in the yaml file, please update")
-            if email is not None:
-                recipients += [email]
+        
         # Create and send email
         m = account.new_message()
+        
+        # Handle recipients
+        if email is not None:
+            recipients = [email] if isinstance(email, str) else email
+        else:
+            recipients = [String.load("datateam-email").value]
+            
         if env == 'QA':
             recipients = [String.load("datateam-email").value]
-            if message_status == 'Error':
-                try:
-                    print(load_yaml['error_recipients'])
-                except:
-                    print("No error_recipients found in the yaml file, please update")
-            if email is not None:
-                recipients += [email]
-                
-            subject += ' - DEBUG MODE' 
+            subject += ' - DEBUG MODE'
+            
         m.to.add(recipients)
         m.subject = subject
+
+        # Format body based on message status if provided
         if message_status == 'Success':
             body_formatted = f"""
                 <div style="font-family: Arial, sans-serif; border: 2px solid #4CAF50; padding: 16px; border-radius: 8px; background-color: #DFF2BF;">
@@ -131,11 +116,25 @@ def send_email(recipient_yaml_file_path: str = find_yaml_path(),
             """
         else:
             body_formatted = body
-            
-        m.body = body_formatted
 
-        for attachment in attachments:
-            m.attachments.add(attachment)
+        m.body = body_formatted
+        m.body_type = 'HTML'
+
+        # Handle attachments with content IDs for inline images
+        if attachments:
+            for attachment in attachments:
+                # If this attachment has a content ID, set it as inline
+                if content_ids and attachment in content_ids:
+                    m.attachments.add(attachment)
+                    # Get the last added attachment
+                    last_attachment = m.attachments[-1]
+                    # Set it as inline with the content ID
+                    last_attachment.is_inline = True
+                    last_attachment.content_id = content_ids[attachment]
+                else:
+                    # Regular attachment
+                    m.attachments.add(attachment)
+        
         m.send()
 
 if __name__ == "__main__":
