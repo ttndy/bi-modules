@@ -9,10 +9,8 @@ import yaml
 from pathlib import Path
 from prefect.blocks.system import String
 from prefect.concurrency.sync import concurrency
+from prefect.variables import Variable
 
-env = String.load("environment").value
-system_configuration_block = SystemConfiguration.load("datateam-email-credentials", validate=False)
-system_secrets = system_configuration_block.system_secrets.get_secret_value()
 
 ################################################################################################################################
 def find_yaml_path():
@@ -29,6 +27,9 @@ def find_yaml_path():
     raise FileNotFoundError("Cannot determine the caller's path for recipients.yaml")
 
 def login() -> Account:
+    system_configuration_block = SystemConfiguration.load("datateam-email-credentials", validate=False)
+    system_secrets = system_configuration_block.system_secrets.get_secret_value()
+
     account = Account(
         credentials=(system_secrets['client_id'], system_secrets['client_secret']),
         auth_flow_type='credentials',
@@ -81,7 +82,7 @@ def send_email(
             recipients = [email] if isinstance(email, str) else email
         else:
             recipients = [String.load("datateam-email").value]
-            
+        env = Variable.get("env")
         if env == 'QA':
             recipients = [String.load("datateam-email").value]
             subject += ' - DEBUG MODE'
@@ -137,5 +138,4 @@ def send_email(
         m.send()
 
 if __name__ == "__main__":
-    print(env)
     send_email(subject='Test',body='Test',attachments=['recipients.yaml','reports.yaml'],message_status='Warning')

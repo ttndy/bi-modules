@@ -16,10 +16,8 @@ try:
 except:
     from bi_email import send_email
 import base64
-env = String.load("environment").value
+from prefect.variables import Variable
 
-system_configuration_block = SystemConfiguration.load("datateam-email-credentials")
-system_secrets = system_configuration_block.system_secrets.get_secret_value()
 
 ################################################################################################################################
 def find_reports_yaml_path():
@@ -448,6 +446,7 @@ def report_refresh(
                           ) -> None:
     with open(reports_yaml_file_path, 'r') as file:
         reports = yaml.safe_load(file).get('reports', [])
+        env = Variable.get("env")
         if env == 'QA':
             return print(f"Running in QA, skipping refresh for the following report(s):<br>{reports}")
         for report in reports:

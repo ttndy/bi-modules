@@ -1,7 +1,6 @@
 from sqlalchemy import create_engine
 import snowflake.connector
 from prefect.blocks.system import String
-env = String.load("environment").value
 from prefect_snowflake import SnowflakeCredentials
 from prefect.runtime import deployment,flow_run
 ################################################################################################################################
@@ -69,6 +68,5 @@ def sf_pe_prod_connection(database: str = 'BUSINESSINTEL01'
 
 
 if __name__ == "__main__":
-    print(env)
     conn = sf_pe_prod_connection()
     conn.cursor().execute('SELECT CURRENT_TIMESTAMP()').fetchone()

@@ -2,11 +2,9 @@ import requests
 from prefect.blocks.system import Secret  
 import json
 from prefect.blocks.system import String
-
-env = String.load("environment").value
+from prefect.variables import Variable
 
 def blob_cleanup(blob_name):
-    
     secret_block = Secret.load("delete-stage-blob-url")
     delete_blob_url = secret_block.get()
 
