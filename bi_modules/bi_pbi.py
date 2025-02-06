@@ -93,7 +93,6 @@ class PowerBiRefresh:
             self.api_token, _, _ = self.get_power_bi_access_token()  
             headers = {"Authorization": self.api_token}    
             response = requests.get(url, headers=headers)    
-        print(response)
         groups = response.json()['value']    
         for group in groups:
             if group['name'].lower() == self.group_name.lower():    
@@ -105,17 +104,30 @@ class PowerBiRefresh:
         url = f"https://api.powerbi.com/v1.0/myorg/groups/{self.group_id}/datasets"    
         headers = {"Authorization": self.api_token}    
         response = requests.get(url, headers=headers)    
+        print(f"Dataset request response: {response.status_code}")
+        
         if response.status_code == 401:  
+            print("Token expired, refreshing...")
             self.api_token, _, _ = self.get_power_bi_access_token()  
             headers = {"Authorization": self.api_token}    
             response = requests.get(url, headers=headers)    
-        datasets = response.json()['value']    
+            print(f"Dataset request response after token refresh: {response.status_code}")
+        
+        if response.status_code != 200:
+            print(f"Error getting datasets: {response.status_code}")
+            print(f"Response content: {response.text}")
+            return None
+        
         try:
+            datasets = response.json()['value']    
             for dataset in datasets:    
                 if dataset['name'] == self.report_name:   
                     return dataset['id']   
-        except:
-            print(f'Error: Dataset not found or not configured to be refreshed for {self.report_name}') 
+        except Exception as e:
+            print(f'Error parsing dataset response: {str(e)}')
+            print(f'Response content: {response.text}')
+        
+        print(f'Dataset not found or not configured to be refreshed for {self.report_name}') 
         return None    
   
     def refresh_power_bi_dataset(self):    

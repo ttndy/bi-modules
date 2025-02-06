@@ -11,9 +11,8 @@ from prefect.blocks.system import String
 from prefect.concurrency.sync import concurrency
 
 env = String.load("environment").value
-system_configuration_block = SystemConfiguration.load("datateam-email-credentials")
+system_configuration_block = SystemConfiguration.load("datateam-email-credentials", validate=False)
 system_secrets = system_configuration_block.system_secrets.get_secret_value()
-
 
 ################################################################################################################################
 def find_yaml_path():
