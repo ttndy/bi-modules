@@ -15,16 +15,40 @@ from prefect.variables import Variable
 ################################################################################################################################
 def find_yaml_path():
     stack = inspect.stack()
-    # Start from 1 to skip the current function's frame
-    return 'recipients.yaml'
+    # Skip this function's frame and look for the outermost caller
+    # that's not part of the bi_modules package
     for frame in stack[1:]:
         module = inspect.getmodule(frame[0])
         if module is None:
             continue
+        
         module_file = module.__file__
         if module_file and Path(module_file).name != '<stdin>':
-            return Path(module_file).parent / 'recipients.yaml'
-    raise FileNotFoundError("Cannot determine the caller's path for recipients.yaml")
+            module_path = Path(module_file)
+            # Check if this module is NOT from bi_modules (i.e., it's a user script)
+            if 'bi_modules' not in str(module_path):
+                print(f"Found caller path: {module_path.parent / 'recipients.yaml'}")
+                return module_path.parent / 'recipients.yaml'
+    
+    # If we can't determine caller path or caller is from bi_modules, return current working directory
+    print(f"Using fallback path: {Path('./recipients.yaml').absolute()}")
+    return Path('./recipients.yaml')
+
+def get_recipients_from_yaml():
+    """
+    Try to load recipients from a yaml file
+    Returns list of recipients if file exists and contains valid data, None otherwise
+    """
+    try:
+        yaml_path = find_yaml_path()
+        if yaml_path.exists():
+            with open(yaml_path, 'r') as f:
+                data = yaml.safe_load(f)
+                if isinstance(data, dict) and 'recipients' in data:
+                    return data['recipients']
+    except Exception as e:
+        print(f"Error loading recipients from yaml: {e}")
+    return None
 
 def login() -> Account:
     system_configuration_block = SystemConfiguration.load("datateam-email-credentials", validate=False)
@@ -61,15 +85,62 @@ def send_email(
     message_status: str = None  # Optional message status
 ):
     """
-    Send an email with optional inline images and status formatting
+    Send an HTML email with optional attachments, inline images, and status-based formatting.
+    
+    This function is used across various pipeline tools to deliver notifications, reports,
+    and alerts. It handles authentication, recipient resolution, and message formatting.
     
     Args:
-        subject: Email subject
-        body: Email body (HTML)
-        attachments: List of file paths to attach
-        email: Recipient email address(es)
-        content_ids: Dictionary mapping file paths to content IDs for inline images
-        message_status: Optional status ('Success', 'Error', 'Warning') for formatting
+        subject (str): Email subject line.
+        body (str): Email body content in HTML format. Can include HTML tags for formatting.
+        attachments (list, optional): List of file paths to attach to the email.
+            Example: ['path/to/file1.pdf', 'path/to/file2.xlsx']
+        email (str or list, optional): Recipient email address(es). Can be a single email string
+            or a list of email addresses. If None, the function will:
+            1. Try to load recipients from a nearby 'recipients.yaml' file
+            2. Fall back to the default email from "datateam-email" String block
+        content_ids (dict, optional): Dictionary mapping attachment file paths to content IDs
+            for inline images. Used when embedding images directly in HTML.
+            Example: {'/path/to/image.jpg': 'image1'} with HTML: <img src="cid:image1">
+        message_status (str, optional): Optional formatting style for the message.
+            Accepted values:
+            - 'Success': Green border with success header
+            - 'Error': Red border with error header
+            - 'Warning': Yellow border with warning header
+            - None: No special formatting, body sent as-is
+    
+    Environment Behavior:
+        - In QA environment (when Variable.get("env") == 'QA'):
+          - All emails are redirected to the default datateam email regardless of 'email' parameter
+          - Subject is appended with ' - DEBUG MODE'
+        - In other environments, emails are sent to the specified recipients
+    
+    Concurrency:
+        Uses "email_concurrency" to prevent sending too many emails simultaneously
+    
+    Examples:
+        # Simple notification
+        send_email(
+            subject="Daily Report Completed",
+            body="<p>The daily report has been generated successfully.</p>",
+            message_status="Success"
+        )
+        
+        # With attachment
+        send_email(
+            subject="Monthly Report",
+            body="<p>Please find the attached report.</p>",
+            attachments=["/path/to/report.pdf"]
+        )
+        
+        # With inline image
+        send_email(
+            subject="Data Visualization",
+            body="<p>Here's the chart: <img src='cid:chart1'></p>",
+            attachments=["/path/to/chart.png"],
+            content_ids={"/path/to/chart.png": "chart1"},
+            message_status="Warning"
+        )
     """
     with concurrency("email_concurrency", occupy=1):
         account = login()
@@ -81,7 +152,13 @@ def send_email(
         if email is not None:
             recipients = [email] if isinstance(email, str) else email
         else:
-            recipients = [String.load("datateam-email").value]
+            # Try to get recipients from yaml file
+            yaml_recipients = get_recipients_from_yaml()
+            if yaml_recipients:
+                recipients = yaml_recipients
+            else:
+                recipients = [String.load("datateam-email").value]
+                
         env = Variable.get("env")
         if env == 'QA':
             recipients = [String.load("datateam-email").value]
