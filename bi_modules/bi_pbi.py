@@ -242,7 +242,8 @@ class PowerBiRefresh:
         try:  
             reports = response.json()['value']  
             for report in reports:    
-                if report['datasetId'] == self.dataset_id:    
+                if  report['name'] == self.report_name:   
+                    self.dataset_id = report['datasetId'] 
                     print('Report Name: ', report['name'])
                     # Get report pages
                     pages_url = f"https://api.powerbi.com/v1.0/myorg/groups/{self.group_id}/reports/{report['id']}/pages"
