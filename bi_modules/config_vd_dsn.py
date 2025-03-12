@@ -6,7 +6,8 @@ import os
 
 def conn_vd(bu, division):
     try:
-        string_block_uid = String.load(f"vd-uid-{bu}-{division}")
+        string_name = f"vd-uid-{bu}-{division}".lower()
+        string_block_uid = String.load(string_name)
         secret_block_pwd = Secret.load(f"vd-pwd-shared")
 
         uid = string_block_uid.value
