@@ -4,12 +4,12 @@ from prefect_azure import AzureBlobStorageCredentials, AzureBlobStorageContainer
 import logging
 import os
 
-def conn_vd(bu):
+def conn_vd(bu, division):
     try:
-        secret_block_uid = Secret.load(f"vd-uid-{bu}")
-        secret_block_pwd = Secret.load(f"vd-pwd-{bu}")
+        string_block_uid = String.load(f"vd-uid-{bu}-{division}")
+        secret_block_pwd = Secret.load(f"vd-pwd-shared")
 
-        uid = secret_block_uid.get()
+        uid = string_block_uid.value
         pwd = secret_block_pwd.get()
 
         host=String.load("dataconnect-host").value
