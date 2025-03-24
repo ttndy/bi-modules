@@ -34,11 +34,13 @@ def find_reports_yaml_path():
     raise FileNotFoundError("Cannot determine the caller's path for reports.yaml")
 
 class PowerBiRefresh:    
-    def __init__(self, report_name: str, group_name: str, number_of_tries: int = 5, tables: list = None):    
+    def __init__(self, report_name: str, group_name: str, number_of_tries: int = 5, tables: list = None, use_app_link: bool = False, app_id: str = None):    
         self.report_name = report_name    
         self.group_name = group_name
         self.number_of_tries = number_of_tries
         self.tables = tables  # Initialize the tables instance variable
+        self.use_app_link = use_app_link  # Whether to use app link instead of direct report link
+        self.app_id = app_id  # App ID for creating the app link
         self.api_token, self.start_time, self.expires_in = self.get_power_bi_access_token()  
         self.group_id = self.get_group_id()
         self.dataset_id = self.get_dataset_id()
@@ -141,9 +143,14 @@ class PowerBiRefresh:
             try:  
                 # If self.tables parameter is provided, include it in the request body
                 if self.tables and isinstance(self.tables, list) and len(self.tables) > 0:
-                    body = {"tables": [{"name": table} for table in self.tables]}
+                    body = {
+                        "type": "full",
+                        "commitMode": "transactional",
+                        "objects": [{"table": table} for table in self.tables]
+                        }
                     response = requests.post(url, headers=headers, json=body)
                     print(f"Refreshing specific tables: {self.tables}")
+                    print(f"Request body: {json.dumps(body, indent=2)}")
                 else:
                     # Default behavior: refresh all tables
                     response = requests.post(url, headers=headers)
@@ -154,7 +161,11 @@ class PowerBiRefresh:
                     
                     # Retry with new token
                     if self.tables and isinstance(self.tables, list) and len(self.tables) > 0:
-                        body = {"tables": [{"name": table} for table in self.tables]}
+                        body = {
+                            "type": "full",
+                            "commitMode": "transactional",
+                            "objects": [{"table": table} for table in self.tables]
+                            }
                         response = requests.post(url, headers=headers, json=body)
                     else:
                         response = requests.post(url, headers=headers)
@@ -453,17 +464,30 @@ class PowerBiRefresh:
         # Check refresh status  
         status_check_response = self.power_bi_check_refresh_status()  
         print("Status Check Response: ", status_check_response)
-  
+
+    def get_app_url(self):
+        """
+        Generates a Power BI app (switchboard) URL for the report if app_id is provided.
+        """
+        if not self.app_id or not self.group_id or not self.report_id:
+            return None
+        
+        # Construct the app URL with the format:
+        # https://app.powerbi.com/groups/{group_id}/apps/{app_id}/reports/{report_id}
+        app_url = f"https://app.powerbi.com/groups/{self.group_id}/apps/{self.app_id}/reports/{self.report_id}"
+        return app_url
 
 ################################################################################################################################
 
 def report_refresh(
-                    number_of_tries: int = 5,
+                    number_of_tries: int = 35,
                     send_email_when_done: bool = False,
                     subject: str = '',
                     body: str = '',
                     reports_yaml_file_path: str = find_reports_yaml_path(),
-                    tables: list = None
+                    tables: list = None,
+                    use_app_link: bool = False,
+                    app_id: str = None
                           ) -> None:
     with open(reports_yaml_file_path, 'r') as file:
         reports = yaml.safe_load(file).get('reports', [])
@@ -485,18 +509,33 @@ def report_refresh(
 
             if refresh:
                 print(f"Refreshing {report_name} in Workspace {group_name}...")
-                power_bi_refresh = PowerBiRefresh(report_name, group_name, number_of_tries, tables=tables)  
+                # Pass use_app_link and app_id to the PowerBiRefresh constructor
+                power_bi_refresh = PowerBiRefresh(report_name, group_name, number_of_tries, tables=tables, 
+                                                use_app_link=use_app_link, app_id=app_id)  
                 power_bi_refresh.pbi_refresh()
 
 
                 if send_email_when_done:  
-                    report_id,webUrl = power_bi_refresh.get_report_id()
+                    report_id, webUrl = power_bi_refresh.get_report_id()
+                    
+                    # Use app URL if requested and available
+                    if use_app_link and app_id:
+                        app_url = power_bi_refresh.get_app_url()
+                        if app_url:
+                            link_url = app_url
+                            link_text = "View in Power BI App"
+                        else:
+                            link_url = webUrl
+                            link_text = "Link to Report"
+                    else:
+                        link_url = webUrl
+                        link_text = "Link to Report"
 
                     html_content = f'''
                     <div style="font-family: Arial, sans-serif; border: 2px solid #4CAF50; padding: 16px; border-radius: 8px; background-color: #f9f9f9;">
                         <h2 style="color: #4CAF50;">Power BI Refresh: <span style="font-weight: bold;">{report_name} in Workspace: {group_name}</span> completed successfully.</h2>
                         <p style="font-size: 18px;">Click the button below to view the report:</p>
-                        <br><a href="{webUrl}" style="background-color: #4CAF50; color: white; padding: 14px 20px; margin: 8px 0; border: none; cursor: pointer; border-radius: 4px; text-decoration: none;">Link to Report</a><br>
+                        <br><a href="{link_url}" style="background-color: #4CAF50; color: white; padding: 14px 20px; margin: 8px 0; border: none; cursor: pointer; border-radius: 4px; text-decoration: none;">{link_text}</a><br>
                     </div>
                     '''
 
@@ -529,14 +568,16 @@ def report_refresh(
 
 
 def report_refresh_noyaml(
-                    number_of_tries: int = 5,
+                    number_of_tries: int = 35,
                     send_email_when_done: bool = False,
                     subject: str = '',
                     body: str = '',
                     report_name: str = '',
                     group_name: str = '',
                     email_recipients: str = None,
-                    tables: list = None
+                    tables: list = None,
+                    use_app_link: bool = False,
+                    app_id: str = None
                           ) -> None:
                           
     # if env == 'QA':
@@ -554,18 +595,32 @@ def report_refresh_noyaml(
 
     if refresh:
         print(f"Refreshing {report_name} in Workspace {group_name}...")
-        power_bi_refresh = PowerBiRefresh(report_name, group_name, number_of_tries, tables=tables)  
+        power_bi_refresh = PowerBiRefresh(report_name, group_name, number_of_tries, tables=tables,
+                                         use_app_link=use_app_link, app_id=app_id)  
         power_bi_refresh.pbi_refresh()
 
 
         if send_email_when_done:  
-            report_id,webUrl = power_bi_refresh.get_report_id()
+            report_id, webUrl = power_bi_refresh.get_report_id()
+            
+            # Use app URL if requested and available
+            if use_app_link and app_id:
+                app_url = power_bi_refresh.get_app_url()
+                if app_url:
+                    link_url = app_url
+                    link_text = "View in Power BI App"
+                else:
+                    link_url = webUrl
+                    link_text = "Link to Report"
+            else:
+                link_url = webUrl
+                link_text = "Link to Report"
 
             html_content = f'''
             <div style="font-family: Arial, sans-serif; border: 2px solid #4CAF50; padding: 16px; border-radius: 8px; background-color: #f9f9f9;">
                 <h2 style="color: #4CAF50;">Power BI Refresh: <span style="font-weight: bold;">{report_name} in Workspace: {group_name}</span> completed successfully.</h2>
                 <p style="font-size: 18px;">Click the button below to view the report:</p>
-                <br><a href="{webUrl}" style="background-color: #4CAF50; color: white; padding: 14px 20px; margin: 8px 0; border: none; cursor: pointer; border-radius: 4px; text-decoration: none;">Link to Report</a><br>
+                <br><a href="{link_url}" style="background-color: #4CAF50; color: white; padding: 14px 20px; margin: 8px 0; border: none; cursor: pointer; border-radius: 4px; text-decoration: none;">{link_text}</a><br>
             </div>
             '''
 
@@ -612,7 +667,9 @@ def send_report_as_embedded_image(
     body: str = None,
     pages: list = None,  # New parameter for specifying pages
     include_pdf: bool = True,  # New parameter to control PDF export
-    number_of_tries: int = 5
+    number_of_tries: int = 5,
+    use_app_link: bool = False,  # New parameter to use app link instead of direct report link
+    app_id: str = None  # App ID for creating the app link
 ) -> None:
     """
     Exports Power BI report pages as PNG for inline display and optionally as PDF for attachment.
@@ -626,9 +683,11 @@ def send_report_as_embedded_image(
         pages: List of page names to export (optional, defaults to first page)
         include_pdf: Whether to include PDF attachment (default True)
         number_of_tries: Number of refresh attempts
+        use_app_link: Whether to use app link instead of direct report link (optional)
+        app_id: App ID for creating the app link (required if use_app_link is True)
     """
-    # Initialize PowerBI connection
-    power_bi = PowerBiRefresh(report_name, group_name, number_of_tries)
+    # Initialize PowerBI connection with app link options
+    power_bi = PowerBiRefresh(report_name, group_name, number_of_tries, use_app_link=use_app_link, app_id=app_id)
     
     # Get report ID first
     power_bi.report_id, power_bi.report_url = power_bi.get_report_id()
@@ -687,6 +746,19 @@ def send_report_as_embedded_image(
         # Create a unique Content-ID for the image
         content_id = f"report_image_{int(time.time())}"
         
+        # Determine which URL to use in the email
+        if use_app_link and app_id:
+            app_url = power_bi.get_app_url()
+            if app_url:
+                link_url = app_url
+                link_text = "View in Power BI App"
+            else:
+                link_url = power_bi.report_url
+                link_text = "View in Power BI"
+        else:
+            link_url = power_bi.report_url
+            link_text = "View in Power BI"
+        
         # Create the HTML body with the embedded image using CID
         html_content = f"""
         <div style="font-family: Arial, sans-serif; padding: 16px;">
@@ -694,7 +766,7 @@ def send_report_as_embedded_image(
             <div style="margin-bottom: 20px;">
                 <h2 style="color: #4CAF50;">Power BI Report: {report_name}</h2>
                 <p>Pages: {', '.join(pages)}</p>
-                {f'<a href="{power_bi.report_url}" style="color: #4CAF50; text-decoration: none;">View in Power BI</a>' if power_bi.report_url else ''}
+                {f'<a href="{link_url}" style="color: #4CAF50; text-decoration: none;">{link_text}</a>' if link_url else ''}
             </div>
             <div>
                 <img src="cid:{content_id}" style="max-width: 100%; height: auto;" />
@@ -725,13 +797,31 @@ def send_report_as_embedded_image(
         raise
 
 if __name__ == "__main__":
-
-    send_report_as_embedded_image(
-    report_name="",
-    group_name="",
-    recipients=["test@test.com"],
-    pages=["Net $ to Budget Tracking"],  # Specify pages by their display names
-    subject="",
-    body="Here's the latest report data:",
-    include_pdf=False
+    # Test 1: Send a report as embedded image with app link
+    # print("\n=== Testing send_report_as_embedded_image with app link ===")
+    # send_report_as_embedded_image(
+    #     report_name="Sales Dashboard",
+    #     group_name="Finance",
+    #     recipients=["test@test.com"],
+    #     pages=["Net $ to Budget Tracking"],  # Specify pages by their display names
+    #     subject="Power BI Sales Dashboard",
+    #     body="Here's the latest report data:",
+    #     include_pdf=False,
+    #     use_app_link=True,
+    #     app_id="12345678-1234-1234-1234-123456789012"  # Example app ID - replace with an actual app ID
+    # )
+    
+    # Test 2: Refresh a report with specific tables
+    print("\n=== Testing report_refresh_noyaml with specific tables ===")
+    report_refresh_noyaml(
+        report_name="THD_POS_ANALYSIS",
+        group_name="RYOBI USA - Analytics",
+        tables=["VW_FACT_THD_STORE_SKU_SALES_FLASH", "VW_DIM_THD_STORE", "VW_DIM_THD_SKU","VW_DIM_CALENDARS"],  # Specific tables to refresh
+        send_email_when_done=True,
+        email_recipients="datateam@ttigroupna.com",
+        subject="Power BI Refresh Completed",
+        body="The refresh of specific tables has completed successfully.",
+        use_app_link=True,
+        app_id="a7427c79-013f-4984-a037-561eecdb44ab",  # Example app ID - replace with an actual app ID
+        number_of_tries=30
     )
