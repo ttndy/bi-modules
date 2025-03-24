@@ -144,7 +144,7 @@ class PowerBiRefresh:
                 # If self.tables parameter is provided, include it in the request body
                 if self.tables and isinstance(self.tables, list) and len(self.tables) > 0:
                     body = {
-                        "type": "DataOnly",
+                        "type": "Full",
                         "commitMode": "transactional",
                         "objects": [{"table": table} for table in self.tables],
                         "applyRefreshPolicy": "false"
@@ -163,7 +163,7 @@ class PowerBiRefresh:
                     # Retry with new token
                     if self.tables and isinstance(self.tables, list) and len(self.tables) > 0:
                         body = {
-                            "type": "DataOnly",
+                            "type": "Full",
                             "commitMode": "transactional",
                             "objects": [{"table": table} for table in self.tables],
                             "applyRefreshPolicy": "false"
