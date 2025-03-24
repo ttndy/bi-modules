@@ -144,9 +144,10 @@ class PowerBiRefresh:
                 # If self.tables parameter is provided, include it in the request body
                 if self.tables and isinstance(self.tables, list) and len(self.tables) > 0:
                     body = {
-                        "type": "full",
+                        "type": "DataOnly",
                         "commitMode": "transactional",
-                        "objects": [{"table": table} for table in self.tables]
+                        "objects": [{"table": table} for table in self.tables],
+                        "applyRefreshPolicy": "false"
                         }
                     response = requests.post(url, headers=headers, json=body)
                     print(f"Refreshing specific tables: {self.tables}")
@@ -162,9 +163,10 @@ class PowerBiRefresh:
                     # Retry with new token
                     if self.tables and isinstance(self.tables, list) and len(self.tables) > 0:
                         body = {
-                            "type": "full",
+                            "type": "DataOnly",
                             "commitMode": "transactional",
-                            "objects": [{"table": table} for table in self.tables]
+                            "objects": [{"table": table} for table in self.tables],
+                            "applyRefreshPolicy": "false"
                             }
                         response = requests.post(url, headers=headers, json=body)
                     else:
@@ -813,15 +815,16 @@ if __name__ == "__main__":
     
     # Test 2: Refresh a report with specific tables
     print("\n=== Testing report_refresh_noyaml with specific tables ===")
-    report_refresh_noyaml(
-        report_name="Sales Dashboard",
-        group_name="Finance",
-        tables=["table1","table2"],  # Specific tables to refresh
-        send_email_when_done=True,
-        email_recipients="test@test.com",
-        subject="Power BI Refresh Completed",
-        body="The refresh of specific tables has completed successfully.",
-        use_app_link=True,
-        app_id="12345678-1234-1234-1234-123456789012",  # Example app ID - replace with an actual app ID
-        number_of_tries=30
-    )
+    # report_refresh_noyaml(
+    #     report_name="Sales Dashboard",
+    #     group_name="Finance",
+    #     tables=["table1","table2"],  # Specific tables to refresh
+    #     send_email_when_done=True,
+    #     email_recipients="test@test.com",
+    #     subject="Power BI Refresh Completed",
+    #     body="The refresh of specific tables has completed successfully.",
+    #     use_app_link=True,
+    #     app_id="12345678-1234-1234-1234-123456789012",  # Example app ID - replace with an actual app ID
+    #     number_of_tries=30
+    # )
+    
