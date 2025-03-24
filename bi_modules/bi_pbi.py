@@ -34,10 +34,11 @@ def find_reports_yaml_path():
     raise FileNotFoundError("Cannot determine the caller's path for reports.yaml")
 
 class PowerBiRefresh:    
-    def __init__(self, report_name: str, group_name: str, number_of_tries: int = 5):    
+    def __init__(self, report_name: str, group_name: str, number_of_tries: int = 5, tables: list = None):    
         self.report_name = report_name    
         self.group_name = group_name
         self.number_of_tries = number_of_tries
+        self.tables = tables  # Initialize the tables instance variable
         self.api_token, self.start_time, self.expires_in = self.get_power_bi_access_token()  
         self.group_id = self.get_group_id()
         self.dataset_id = self.get_dataset_id()
@@ -131,15 +132,33 @@ class PowerBiRefresh:
     def refresh_power_bi_dataset(self):    
         self.check_token_refresh()  
         url = f"https://api.powerbi.com/v1.0/myorg/groups/{self.group_id}/datasets/{self.dataset_id}/refreshes"    
-        headers = {"Authorization": self.api_token}    
+        headers = {
+            "Authorization": self.api_token, 
+            "Content-Type": "application/json"
+        }    
         i = 0    
         while i < 5:  
             try:  
-                response = requests.post(url, headers=headers)  
+                # If self.tables parameter is provided, include it in the request body
+                if self.tables and isinstance(self.tables, list) and len(self.tables) > 0:
+                    body = {"tables": [{"name": table} for table in self.tables]}
+                    response = requests.post(url, headers=headers, json=body)
+                    print(f"Refreshing specific tables: {self.tables}")
+                else:
+                    # Default behavior: refresh all tables
+                    response = requests.post(url, headers=headers)
+                
                 if response.status_code == 401:  
                     self.api_token, _, _ = self.get_power_bi_access_token()  
-                    headers = {"Authorization": self.api_token}    
-                    response = requests.post(url, headers=headers)  
+                    headers["Authorization"] = self.api_token
+                    
+                    # Retry with new token
+                    if self.tables and isinstance(self.tables, list) and len(self.tables) > 0:
+                        body = {"tables": [{"name": table} for table in self.tables]}
+                        response = requests.post(url, headers=headers, json=body)
+                    else:
+                        response = requests.post(url, headers=headers)
+                
                 time.sleep(10)  
                 return response  
             except Exception as e:  
@@ -194,9 +213,9 @@ class PowerBiRefresh:
             else:
                 print(f"""
                             Status Check:
-                      Not completed, checking again in {i+1} minute(s)
+                      Not completed, checking again in {1} minute
                       """)
-                time.sleep((i+1)*60)
+                time.sleep(60)
                 i = i + 1
         elapsed_time = datetime.datetime.now() - self.start_time
         if elapsed_time.seconds > 3600:
@@ -433,7 +452,7 @@ class PowerBiRefresh:
   
         # Check refresh status  
         status_check_response = self.power_bi_check_refresh_status()  
-        print("Status Check Response: ", status_check_response)  
+        print("Status Check Response: ", status_check_response)
   
 
 ################################################################################################################################
@@ -443,7 +462,8 @@ def report_refresh(
                     send_email_when_done: bool = False,
                     subject: str = '',
                     body: str = '',
-                    reports_yaml_file_path: str = find_reports_yaml_path()
+                    reports_yaml_file_path: str = find_reports_yaml_path(),
+                    tables: list = None
                           ) -> None:
     with open(reports_yaml_file_path, 'r') as file:
         reports = yaml.safe_load(file).get('reports', [])
@@ -465,7 +485,7 @@ def report_refresh(
 
             if refresh:
                 print(f"Refreshing {report_name} in Workspace {group_name}...")
-                power_bi_refresh = PowerBiRefresh(report_name, group_name,number_of_tries)  
+                power_bi_refresh = PowerBiRefresh(report_name, group_name, number_of_tries, tables=tables)  
                 power_bi_refresh.pbi_refresh()
 
 
@@ -516,6 +536,7 @@ def report_refresh_noyaml(
                     report_name: str = '',
                     group_name: str = '',
                     email_recipients: str = None,
+                    tables: list = None
                           ) -> None:
                           
     # if env == 'QA':
@@ -533,7 +554,7 @@ def report_refresh_noyaml(
 
     if refresh:
         print(f"Refreshing {report_name} in Workspace {group_name}...")
-        power_bi_refresh = PowerBiRefresh(report_name, group_name,number_of_tries)  
+        power_bi_refresh = PowerBiRefresh(report_name, group_name, number_of_tries, tables=tables)  
         power_bi_refresh.pbi_refresh()
 
 
