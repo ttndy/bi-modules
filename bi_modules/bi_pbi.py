@@ -814,14 +814,14 @@ if __name__ == "__main__":
     # Test 2: Refresh a report with specific tables
     print("\n=== Testing report_refresh_noyaml with specific tables ===")
     report_refresh_noyaml(
-        report_name="THD_POS_ANALYSIS",
-        group_name="RYOBI USA - Analytics",
-        tables=["VW_FACT_THD_STORE_SKU_SALES_FLASH", "VW_DIM_THD_STORE", "VW_DIM_THD_SKU","VW_DIM_CALENDARS"],  # Specific tables to refresh
+        report_name="Sales Dashboard",
+        group_name="Finance",
+        tables=["table1","table2"],  # Specific tables to refresh
         send_email_when_done=True,
-        email_recipients="datateam@ttigroupna.com",
+        email_recipients="test@test.com",
         subject="Power BI Refresh Completed",
         body="The refresh of specific tables has completed successfully.",
         use_app_link=True,
-        app_id="a7427c79-013f-4984-a037-561eecdb44ab",  # Example app ID - replace with an actual app ID
+        app_id="12345678-1234-1234-1234-123456789012",  # Example app ID - replace with an actual app ID
         number_of_tries=30
     )
